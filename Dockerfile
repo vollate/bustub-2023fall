@@ -1,17 +1,15 @@
-FROM debian:latest
+FROM debian:bookworm
 
 ARG USER_NAME="foo"
 ARG USER_PASS="bar"
+ARG ABS_PATH="~"
 
 RUN apt-get update && apt-get install -y \
     build-essential \
-    git \
-    cmake \
-    curl \
-    zip unzip \
-    clang-14 \
-    zsh \
-    sudo
+    git cmake curl zip unzip \
+    clang-format clang-tidy clang \
+    doxygen pkg-config zlib1g-dev libelf-dev libdwarf-dev \
+    zsh sudo
 
 RUN useradd -m $USER_NAME && \
     echo "$USER_NAME:$USER_PASS" | chpasswd && \
@@ -21,6 +19,8 @@ USER $USER_NAME
 
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-WORKDIR /home/$USER_NAME/workspace
+RUN echo "export CC=clang\nexport CXX=clang++">> ~/.zshrc
+
+WORKDIR $ABS_PATH
 
 CMD ["/bin/zsh"]
