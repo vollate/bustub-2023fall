@@ -1,3 +1,8 @@
 #!/bin/bash
+CONTAINER_NAME=bustub_foo
 
-docker run --name ops-docker -v .:$(pwd -P) --rm -it bustub_docker:latest
+if [ -z "$(docker container ls -a |grep $CONTAINER_NAME)" ]; then
+    docker run --name $CONTAINER_NAME -v .:$(pwd -P) --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -it bustub_docker:latest
+else
+    docker start -i $CONTAINER_NAME
+fi

@@ -38,23 +38,27 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should creatSe a new `TrieNodeWithValue`.
   Trie ret{};
+  if (key.empty()) {
+    ret.root_ = std::make_shared<TrieNode>(TrieNodeWithValue<T>(std::make_shared<T>(std::move(value))));
+    return ret;
+  }
   auto new_root = std::make_shared<TrieNode>();
   ret.root_ = new_root;
   auto old_root = root_;
-  std::shared_ptr<TrieNode> new_node = nullptr;
+  std::shared_ptr<TrieNode> next_root = nullptr;
   for (size_t i = 0; i < key.length() - 1; ++i) {
     char key_char = key[i];
     if (old_root != nullptr) {
       new_root->children_ = old_root->children_;
+      if (old_root->children_.find(key_char) != old_root->children_.end()) {
+        old_root = old_root->children_.at(key_char);
+      } else {
+        old_root = nullptr;
+      }
     }
-    new_node = std::make_shared<TrieNode>();
-    new_root->children_[key_char] = new_node;
-    new_root = new_node;
-    if (old_root->children_.find(key_char) != old_root->children_.end()) {
-      old_root = old_root->children_.at(key_char);
-    } else {
-      old_root = nullptr;
-    }
+    next_root = std::make_shared<TrieNode>();
+    new_root->children_[key_char] = next_root;
+    new_root = next_root;
   }
   new_root->children_.insert(
       {key[key.length() - 1], std::make_shared<TrieNode>(TrieNodeWithValue<T>(std::make_shared<T>(std::move(value))))});
@@ -65,6 +69,10 @@ auto Trie::Remove(std::string_view key) const -> Trie {
   // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
   Trie ret{};
+  if (key.empty()) {
+    ret.root_ = std::make_shared<TrieNode>(root_->children_);
+    return ret;
+  }
   auto cur_root = std::make_shared<TrieNode>();
   ret.root_ = cur_root;
   auto old_root = root_;
@@ -73,11 +81,11 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     cur_root = cur_root->children_.at(key[i])->Clone();
   }
   char last_char = key[key.length() - 1];
-  auto child = cur_root->children_.at(last_char);
-  if (child->children_.empty()) {
+  auto target = cur_root->children_.at(last_char);
+  if (target->children_.empty()) {
     cur_root->children_.erase(last_char);
   } else {
-    child = std::make_shared<TrieNode>(child->children_);
+    target = std::make_shared<TrieNode>(target->children_);
   }
   return ret;
 }

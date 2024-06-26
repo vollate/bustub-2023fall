@@ -7,7 +7,9 @@ ARG ABS_PATH="~"
 RUN apt-get update && apt-get install -y \
     #build-essential \
     git cmake curl zip unzip \
-    clang-format clang-tidy clang lldb lld libc++-dev libc++abi-dev python3-lldb \ 
+    clang-format clang-tidy clang lld libc++-dev libc++abi-dev python3-lldb \ 
+    lldb \
+    #gdb \
     doxygen pkg-config zlib1g-dev libelf-dev libdwarf-dev \
     zsh sudo
 
