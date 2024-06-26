@@ -1,4 +1,6 @@
 #include "primer/trie.h"
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string_view>
 #include "common/exception.h"
@@ -11,15 +13,11 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // nullptr. After you find the node, you should use `dynamic_cast` to cast it to `const TrieNodeWithValue<T> *`. If
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
-  if (root_ == nullptr) {
-    return nullptr;
-  }
-  auto cur_root = std::const_pointer_cast<TrieNode>(root_);
-  auto next_root = cur_root;
+
+  auto cur_root = root_;
   for (const auto key_char : key) {
     if (auto val = cur_root->children_.find(key_char); val != cur_root->children_.end()) {
-      next_root = std::const_pointer_cast<TrieNode>(cur_root->children_[key_char]);
-      std::swap(cur_root, next_root);
+      cur_root = cur_root->children_.at(key_char);
     } else {
       return nullptr;
     }
@@ -28,7 +26,7 @@ auto Trie::Get(std::string_view key) const -> const T * {
     return nullptr;
   }
   T *ret = nullptr;
-  if (auto value_node = std::dynamic_pointer_cast<TrieNodeWithValue<T>>(cur_root); value_node != nullptr) {
+  if (auto value_node = std::dynamic_pointer_cast<const TrieNodeWithValue<T>>(cur_root); value_node != nullptr) {
     ret = value_node->value_.get();
   }
   return ret;
@@ -39,28 +37,49 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
   // Note that `T` might be a non-copyable type. Always use `std::move` when creating `shared_ptr` on that value.
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should creatSe a new `TrieNodeWithValue`.
-  Trie ret{root_};
-  auto cur_root = root_;
-  auto next_root = cur_root;
-  for (const auto key_char : key) {
-    if (auto val = cur_root->children_.find(key_char); val != cur_root->children_.end()) {
-      next_root = std::const_pointer_cast<TrieNode>(cur_root->children_[key_char]);
-      std::swap(cur_root, next_root);
+  Trie ret{};
+  auto new_root = std::make_shared<TrieNode>();
+  ret.root_ = new_root;
+  auto old_root = root_;
+  std::shared_ptr<TrieNode> new_node = nullptr;
+  for (size_t i = 0; i < key.length() - 1; ++i) {
+    char key_char = key[i];
+    if (old_root != nullptr) {
+      new_root->children_ = old_root->children_;
+    }
+    new_node = std::make_shared<TrieNode>();
+    new_root->children_[key_char] = new_node;
+    new_root = new_node;
+    if (old_root->children_.find(key_char) != old_root->children_.end()) {
+      old_root = old_root->children_.at(key_char);
     } else {
-      auto new_root = std::make_shared<TrieNode>();
-      for (const auto &kv_pair : cur_root->children_) {
-        new_root->children_.insert(kv_pair);
-      }
-      new_root[key_char] = std::make_shared<TrieNode>();
+      old_root = nullptr;
     }
   }
+  new_root->children_.insert(
+      {key[key.length() - 1], std::make_shared<TrieNode>(TrieNodeWithValue<T>(std::make_shared<T>(std::move(value))))});
   return ret;
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
   // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
-  // TODO(vollate): unimplement
+  Trie ret{};
+  auto cur_root = std::make_shared<TrieNode>();
+  ret.root_ = cur_root;
+  auto old_root = root_;
+  for (size_t i = 0; i < key.length() - 1; ++i) {
+    cur_root->children_ = old_root->children_;
+    cur_root = cur_root->children_.at(key[i])->Clone();
+  }
+  char last_char = key[key.length() - 1];
+  auto child = cur_root->children_.at(last_char);
+  if (child->children_.empty()) {
+    cur_root->children_.erase(last_char);
+  } else {
+    child = std::make_shared<TrieNode>(child->children_);
+  }
+  return ret;
 }
 
 // Below are explicit instantiation of template functions.

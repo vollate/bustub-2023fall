@@ -36,6 +36,8 @@ set(BUSTUB_CLANG_SEARCH_PATH "/usr/local/bin" "/usr/bin" "/usr/local/opt/llvm/bi
         "/opt/homebrew/opt/llvm@14/bin/")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(CMAKE_CXX_FLAGS "-stdlib=libc++")
+        set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
         if(CMAKE_CXX_COMPILER_VERSION MATCHES "^14.")
                 message(STATUS "You're using ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
         else()
