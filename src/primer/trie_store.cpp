@@ -1,4 +1,5 @@
 #include "primer/trie_store.h"
+#include <mutex>
 #include "common/exception.h"
 
 namespace bustub {
@@ -11,20 +12,38 @@ auto TrieStore::Get(std::string_view key) -> std::optional<ValueGuard<T>> {
   // (2) Lookup the value in the trie.
   // (3) If the value is found, return a ValueGuard object that holds a reference to the value and the
   //     root. Otherwise, return std::nullopt.
-  throw NotImplementedException("TrieStore::Get is not implemented.");
+  std::unique_lock r_lock{root_lock_};
+  auto root = root_;
+  r_lock.unlock();
+  if (auto value = root.Get<T>(key); value != nullptr) {
+    return ValueGuard<T>{root, *value};
+  }
+  return std::nullopt;
 }
 
 template <class T>
 void TrieStore::Put(std::string_view key, T value) {
   // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
   // The logic should be somehow similar to `TrieStore::Get`.
-  throw NotImplementedException("TrieStore::Put is not implemented.");
+  std::lock_guard guard{write_lock_};
+  std::unique_lock r_lock{root_lock_};
+  auto root = root_;
+  r_lock.unlock();
+  auto new_root = root.Put<T>(key, std::move(value));
+  r_lock.lock();
+  root_ = new_root;
 }
 
 void TrieStore::Remove(std::string_view key) {
   // You will need to ensure there is only one writer at a time. Think of how you can achieve this.
   // The logic should be somehow similar to `TrieStore::Get`.
-  throw NotImplementedException("TrieStore::Remove is not implemented.");
+  std::lock_guard guard{write_lock_};
+  std::unique_lock r_lock{root_lock_};
+  auto root = root_;
+  r_lock.unlock();
+  auto new_root = root.Remove(key);
+  r_lock.lock();
+  root_ = new_root;
 }
 
 // Below are explicit instantiation of template functions.
